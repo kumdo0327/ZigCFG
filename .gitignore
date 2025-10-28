@@ -1,5 +1,5 @@
 # Config files
-.vscode/
+# .vscode/
 
 # Mac OS system files
 .DS_Store
