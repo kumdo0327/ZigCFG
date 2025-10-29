@@ -40,25 +40,16 @@ struct FreeCmd {
   Expression Expr;
 };
 
-struct AssertEqCmd {
-  Expression Lhs;
-  Expression Rhs;
-};
-
-struct AssertNEqCmd {
-  Expression Lhs;
-  Expression Rhs;
-};
-
-using Command =
-    std::variant<NopCmd, SetCmd, AllocCmd, FreeCmd, AssertEqCmd, AssertNEqCmd>;
+using Command = std::variant<NopCmd, SetCmd, AllocCmd, FreeCmd>;
 
 struct Function {
   std::string Name;
   TSNode RawNode;
   BasicBlockId Entry;
-  BasicBlockId Defer;
-  BasicBlockId ErrDefer;
+  BasicBlockId DeferEntry;
+  BasicBlockId DeferExit;
+  BasicBlockId ErrDeferEntry;
+  BasicBlockId ErrDeferExit;
 };
 
 struct Block {

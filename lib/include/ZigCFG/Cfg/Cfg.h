@@ -19,6 +19,7 @@ private:
 
   const char *SrcPtr;
   BasicBlockId Predecessor;
+  bool IsPredJump;
   std::stack<BasicBlockId> ScopeStack;
   std::stack<BasicBlockId> LoopStack;
   std::list<std::unordered_map<std::string, VarId>> VarScopes;
@@ -31,9 +32,25 @@ private:
 
   void buildFunction(Function &Func);
 
-  void buildBasicBlock(Function &Func, TSTreeCursor &Cursor);
+  void buildBlock(Function &Func, TSTreeCursor &Cursor);
 
   void buildStatement(Function &Func, TSTreeCursor &Cursor);
+
+  void buildIfStmt(Function &Func, TSTreeCursor &Cursor);
+
+  void buildLabeledStmt(Function &Func, TSTreeCursor &Cursor);
+
+  void buildSwitchStmt(Function &Func, TSTreeCursor &Cursor);
+
+  void buildDeferExprStmt(Function &Func, TSTreeCursor &Cursor);
+
+  void buildErrDeferExprStmt(Function &Func, TSTreeCursor &Cursor);
+
+  void buildBlockExprStmt(Function &Func, TSTreeCursor &Cursor);
+
+  void buildAssignExpr(Function &Func, TSTreeCursor &Cursor);
+
+  void buildBlockExpr(Function &Func, TSTreeCursor &Cursor);
 
   BasicBlockId addBasicBlock(Command Cmd);
 

@@ -33,6 +33,7 @@ void Cfg::findFunctions(TSTreeCursor &Cursor) {
     ts_tree_cursor_goto_next_sibling(&Cursor);
     if (equalNodeType(Cursor, "BasicBlock"))
       Functions.push_back({"", EntryNode, addBasicBlock(NopCmd{}),
+                           addBasicBlock(NopCmd{}), addBasicBlock(NopCmd{}),
                            addBasicBlock(NopCmd{}), addBasicBlock(NopCmd{})});
   }
 
@@ -46,6 +47,7 @@ void Cfg::findFunctions(TSTreeCursor &Cursor) {
 
 void Cfg::buildFunction(Function &Func) {
   Predecessor = Func.Entry;
+  IsPredJump = false;
   ScopeStack.push(Func.Entry);
   VarScopes.push_back({});
   auto Cursor = ts_tree_cursor_new(Func.RawNode);
@@ -67,11 +69,11 @@ void Cfg::buildFunction(Function &Func) {
 
   ts_tree_cursor_goto_parent(&Cursor);
   ts_tree_cursor_goto_next_sibling(&Cursor);
-  buildBasicBlock(Func, Cursor);
+  buildBlock(Func, Cursor);
   ts_tree_cursor_delete(&Cursor);
 }
 
-void Cfg::buildBasicBlock(Function &Func, TSTreeCursor &Cursor) {
+void Cfg::buildBlock(Function &Func, TSTreeCursor &Cursor) {
   ts_tree_cursor_goto_first_child(&Cursor);
   ts_tree_cursor_goto_next_sibling(&Cursor);
   while (equalNodeType(Cursor, "Statement")) {
@@ -80,9 +82,41 @@ void Cfg::buildBasicBlock(Function &Func, TSTreeCursor &Cursor) {
   }
   ts_tree_cursor_goto_parent(&Cursor);
 
-  auto BasicBlockExit = addBasicBlock(NopCmd{});
-  BasicBlocks[Predecessor].Successors.push_back(BasicBlockExit);
-  Predecessor = BasicBlockExit;
+  auto BlockExit = addBasicBlock(NopCmd{});
+  BasicBlocks[Predecessor].Successors.push_back(BlockExit);
+  Predecessor = BlockExit;
+}
+
+void Cfg::buildStatement(Function &Func, TSTreeCursor &Cursor) {
+  ts_tree_cursor_goto_first_child(&Cursor);
+  std::string NodeType = ts_node_type(ts_tree_cursor_current_node(&Cursor));
+  if (NodeType == "IfStatement")
+    return buildIfStmt(Func, Cursor);
+  if (NodeType == "LabeledStatement")
+    return buildLabeledStmt(Func, Cursor);
+  if (NodeType == "SwitchStatement")
+    return buildSwitchStmt(Func, Cursor);
+
+  do {
+    std::string NodeType = ts_node_type(ts_tree_cursor_current_node(&Cursor));
+    if (NodeType == "defer")
+      return buildDeferExprStmt(Func, Cursor);
+    if (NodeType == "errdefer")
+      return buildErrDeferExprStmt(Func, Cursor);
+    if (NodeType == "AssignExpr")
+      return buildAssignExpr(Func, Cursor);
+  } while (ts_tree_cursor_goto_next_sibling(&Cursor));
+  ts_tree_cursor_goto_parent(&Cursor);
+}
+
+void Cfg::buildIfStmt(Function &Func, TSTreeCursor &Cursor) {
+  ts_tree_cursor_goto_first_child(&Cursor);
+  ts_tree_cursor_goto_next_sibling(&Cursor);
+  if (compNodeType(Cursor, "BlockExpr")) {
+    buildBlockExpr(Func, Cursor);
+
+    return;
+  }
 }
 
 BasicBlockId Cfg::addBasicBlock(Command Cmd) {
